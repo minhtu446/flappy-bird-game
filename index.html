@@ -351,6 +351,14 @@ function draw() {
     drawNum(score, W/2, 35, true);
   }
 
+  // High Score (only on menu)
+  if (!started && !gameOver) {
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px Pixel, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('High Score: ' + bestScore, Math.floor(W/2), H - 60);
+  }
+
   // overlays
   if (!started && !gameOver) {
     if (assets.message) {
@@ -371,15 +379,18 @@ function draw() {
   if (gameOver) {
     if (assets.gameover) {
       const gw = assets.gameover.width, gh = assets.gameover.height;
-      ctx.drawImage(assets.gameover, (W - gw)/2, (H - gh)/2 - 30);
+      ctx.drawImage(assets.gameover, Math.floor((W - gw)/2), Math.floor((H - gh)/2) - 30);
     }
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(W/2 - 60, H/2 + 10, 120, 50);
+    const cardX = Math.floor(W/2 - 68), cardY = Math.floor(H/2 + 15);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(cardX, cardY, 136, 56);
     ctx.fillStyle = '#fff';
-    ctx.font = '12px monospace';
+    ctx.font = 'bold 16px Pixel, monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('Score: ' + score, W/2, H/2 + 30);
-    ctx.fillText('Best: ' + bestScore, W/2, H/2 + 48);
+    ctx.textBaseline = 'top';
+    ctx.fillText('SCORE  ' + score, Math.floor(W/2), cardY + 10);
+    ctx.fillText('BEST   ' + bestScore, Math.floor(W/2), cardY + 32);
+    ctx.textBaseline = 'alphabetic';
   }
 }
 
