@@ -92,10 +92,10 @@ const assets = {
 const audioFiles = {};
 
 function loadImage(src) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = reject;
+    img.onerror = () => { console.warn('Failed to load:', src); resolve(null); };
     img.src = src;
   });
 }
@@ -124,8 +124,6 @@ async function loadAssets() {
   for (let i = 0; i <= 9; i++) {
     assets.nums[i] = await loadImage(base + i + '.png');
   }
-
-  document.getElementById('loading').style.display = 'none';
 }
 
 // Audio - use HTMLAudioElement for reliable local playback
@@ -271,39 +269,61 @@ function update() {
 
 function drawNum(n, x, y, center) {
   const digits = String(n).split('');
-  let totalW = 0;
-  for (const d of digits) totalW += assets.nums[+d].width;
+  let totalW = 0, count = 0;
+  for (const d of digits) {
+    if (assets.nums[+d]) totalW += assets.nums[+d].width;
+    else count++;
+  }
+  totalW += count * 14;
   let sx = center ? x - totalW/2 : x;
   for (const ch of digits) {
     const img = assets.nums[+ch];
-    const w = img.width, h = img.height;
-    ctx.drawImage(img, 0, 0, w, h, Math.floor(sx), Math.floor(y), w, h);
-    sx += w;
+    if (img) {
+      const w = img.width, h = img.height;
+      ctx.drawImage(img, 0, 0, w, h, Math.floor(sx), Math.floor(y), w, h);
+      sx += w;
+    } else {
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 28px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(ch, Math.floor(sx), Math.floor(y + 24));
+      sx += 14;
+    }
   }
 }
 
 function draw() {
   // background
-  ctx.drawImage(assets.bg, 0, 0);
+  if (assets.bg) {
+    ctx.drawImage(assets.bg, 0, 0);
+  } else {
+    ctx.fillStyle = '#4DC9F6';
+    ctx.fillRect(0, 0, W, H);
+  }
 
   // pipes
   for (const p of pipes) {
-    const ph = assets.pipe.height;
-    // top pipe (flipped)
-    ctx.save();
-    ctx.translate(Math.floor(p.x) + PIPE_W/2, Math.floor(p.topH));
-    ctx.scale(1, -1);
-    ctx.drawImage(assets.pipe, -PIPE_W/2, 0, PIPE_W, ph);
-    ctx.restore();
-    // bottom pipe
-    ctx.drawImage(assets.pipe, Math.floor(p.x), Math.floor(p.topH + PIPE_GAP), PIPE_W, H - p.topH - PIPE_GAP - 16);
+    if (assets.pipe) {
+      const ph = assets.pipe.height;
+      ctx.save();
+      ctx.translate(Math.floor(p.x) + PIPE_W/2, Math.floor(p.topH));
+      ctx.scale(1, -1);
+      ctx.drawImage(assets.pipe, -PIPE_W/2, 0, PIPE_W, ph);
+      ctx.restore();
+      ctx.drawImage(assets.pipe, Math.floor(p.x), Math.floor(p.topH + PIPE_GAP), PIPE_W, H - p.topH - PIPE_GAP - 16);
+    }
   }
 
   // ground
-  const baseW = assets.base.width;
-  const gx = Math.floor(Date.now() * 0.05) % baseW;
-  ctx.drawImage(assets.base, gx, H - 16, baseW, assets.base.height);
-  ctx.drawImage(assets.base, gx - baseW, H - 16, baseW, assets.base.height);
+  if (assets.base) {
+    const baseW = assets.base.width;
+    const gx = Math.floor(Date.now() * 0.05) % baseW;
+    ctx.drawImage(assets.base, gx, H - 16, baseW, assets.base.height);
+    ctx.drawImage(assets.base, gx - baseW, H - 16, baseW, assets.base.height);
+  } else {
+    ctx.fillStyle = '#8BC34A';
+    ctx.fillRect(0, H - 16, W, 16);
+  }
 
   // bird
   const birdImg = bird.flapTime > 0 ? assets.bird2 : (bird.frame < 10 ? assets.bird0 : (bird.frame < 20 ? assets.bird1 : assets.bird2));
@@ -315,6 +335,11 @@ function draw() {
     ctx.rotate(rot);
     ctx.drawImage(birdImg, -Math.floor(bw/2), -Math.floor(bh/2));
     ctx.restore();
+  } else {
+    ctx.fillStyle = '#FFD54F';
+    ctx.beginPath();
+    ctx.ellipse(BIRD_X, bird.y, 12, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   // score
@@ -334,17 +359,26 @@ function draw() {
       const mw = assets.message.width, mh = assets.message.height;
       ctx.drawImage(assets.message, (W - mw)/2, (H - mh)/2 - 20);
     }
+    if (!assets.message) {
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 28px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('FLAPPY BIRD', W/2, H/2 - 30);
+      ctx.font = '14px monospace';
+      ctx.fillText('Click or press Space', W/2, H/2 + 10);
+    }
   }
   if (gameOver) {
     if (assets.gameover) {
       const gw = assets.gameover.width, gh = assets.gameover.height;
       ctx.drawImage(assets.gameover, (W - gw)/2, (H - gh)/2 - 30);
     }
-    // show score card
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.fillRect(W/2 - 60, H/2 + 10, 120, 50);
     ctx.fillStyle = '#fff';
-    ctx.font = '10px monospace';
+    ctx.font = '12px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('Score: ' + score, W/2, H/2 + 30);
     ctx.fillText('Best: ' + bestScore, W/2, H/2 + 48);
@@ -353,10 +387,10 @@ function draw() {
 
 function loop() { update(); draw(); requestAnimationFrame(loop); }
 
-loadAssets().then(() => {
+loadAssets().finally(() => {
   preloadSFX();
-  loop();
   document.getElementById('loading').style.display = 'none';
+  loop();
 });
 </script>
 </body>
