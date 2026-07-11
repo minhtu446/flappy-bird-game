@@ -76,11 +76,25 @@ canvas.width = W;
 canvas.height = H;
 
 const BIRD_X = 64;
-const GRAVITY = 0.45;
-const FLAP = -7.5;
 const PIPE_W = 52;
-const PIPE_GAP = 130;
-const PIPE_SPEED = 2.2;
+let GRAVITY, FLAP, PIPE_GAP, PIPE_SPEED;
+
+const DIFFICULTIES = {
+  easy:   { gravity: 0.35, flap: -6.5, pipeGap: 155, pipeSpeed: 1.6, label: 'EASY' },
+  medium: { gravity: 0.45, flap: -7.5, pipeGap: 130, pipeSpeed: 2.2, label: 'MEDIUM' },
+  hard:   { gravity: 0.55, flap: -8.5, pipeGap: 105, pipeSpeed: 2.8, label: 'HARD' },
+};
+let difficulty = 'medium';
+
+function applyDifficulty(d) {
+  difficulty = d;
+  const cfg = DIFFICULTIES[d];
+  GRAVITY = cfg.gravity;
+  FLAP = cfg.flap;
+  PIPE_GAP = cfg.pipeGap;
+  PIPE_SPEED = cfg.pipeSpeed;
+}
+applyDifficulty('medium');
 
 let bird, pipes, score, bestScore, gameOver, started;
 let soundEnabled = true;
@@ -224,8 +238,33 @@ function flap() {
   playSFX('wing');
 }
 
-canvas.addEventListener('click', flap);
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (W / rect.width);
+  const my = (e.clientY - rect.top) * (H / rect.height);
+
+  if (!started && !gameOver) {
+    const btnW = 64, btnH = 22, gap = 8;
+    const totalW = btnW * 3 + gap * 2;
+    const startX = Math.floor((W - totalW) / 2);
+    const btnY = Math.floor(H/2 + 30);
+    const diffs = ['easy', 'medium', 'hard'];
+    for (let i = 0; i < 3; i++) {
+      const bx = startX + i * (btnW + gap);
+      if (mx >= bx && mx <= bx + btnW && my >= btnY && my <= btnY + btnH) {
+        applyDifficulty(diffs[i]);
+        return;
+      }
+    }
+  }
+  flap();
+});
 document.addEventListener('keydown', e => {
+  if (!started && !gameOver) {
+    if (e.key === '1') { applyDifficulty('easy'); return; }
+    if (e.key === '2') { applyDifficulty('medium'); return; }
+    if (e.key === '3') { applyDifficulty('hard'); return; }
+  }
   if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); flap(); }
 });
 
@@ -351,30 +390,52 @@ function draw() {
     drawNum(score, W/2, 35, true);
   }
 
-  // High Score (only on menu)
+  // High Score & overlay
   if (!started && !gameOver) {
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 16px Pixel, monospace';
+    ctx.font = 'bold 14px Pixel, monospace';
     ctx.textAlign = 'center';
     ctx.fillText('High Score: ' + bestScore, Math.floor(W/2), H - 60);
-  }
 
-  // overlays
-  if (!started && !gameOver) {
     if (assets.message) {
       const mw = assets.message.width, mh = assets.message.height;
-      ctx.drawImage(assets.message, (W - mw)/2, (H - mh)/2 - 20);
-    }
-    if (!assets.message) {
+      ctx.drawImage(assets.message, Math.floor((W - mw)/2), Math.floor((H - mh)/2) - 20);
+    } else {
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
       ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = '#fff';
-      ctx.font = 'bold 28px monospace';
+      ctx.font = 'bold 28px Pixel, monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('FLAPPY BIRD', W/2, H/2 - 30);
-      ctx.font = '14px monospace';
-      ctx.fillText('Click or press Space', W/2, H/2 + 10);
+      ctx.fillText('FLAPPY BIRD', Math.floor(W/2), Math.floor(H/2) - 40);
     }
+
+    // difficulty buttons
+    const btnW = 64, btnH = 22, gap = 8;
+    const totalW = btnW * 3 + gap * 2;
+    const startX = Math.floor((W - totalW) / 2);
+    const btnY = Math.floor(H/2 + 30);
+    const diffs = ['easy', 'medium', 'hard'];
+    for (let i = 0; i < 3; i++) {
+      const d = diffs[i];
+      const bx = startX + i * (btnW + gap);
+      const active = difficulty === d;
+      ctx.fillStyle = active ? '#FFD54F' : 'rgba(255,255,255,0.2)';
+      ctx.fillRect(bx, btnY, btnW, btnH);
+      ctx.strokeStyle = active ? '#5D4037' : 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(bx, btnY, btnW, btnH);
+      ctx.fillStyle = active ? '#5D4037' : '#fff';
+      ctx.font = 'bold 11px Pixel, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(DIFFICULTIES[d].label, Math.floor(bx + btnW/2), Math.floor(btnY + btnH/2));
+      ctx.textBaseline = 'alphabetic';
+    }
+    // press space hint
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = '12px Pixel, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Click or press Space', Math.floor(W/2), Math.floor(H/2 + 75));
   }
   if (gameOver) {
     if (assets.gameover) {
