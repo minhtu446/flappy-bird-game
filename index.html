@@ -21,6 +21,10 @@ canvas {
   image-rendering: crisp-edges;
   cursor: pointer;
   box-shadow: 0 0 0 2px #3a2510, 0 8px 32px rgba(0,0,0,0.5);
+  max-width: 90vw;
+  max-height: 85vh;
+  width: auto;
+  height: auto;
 }
 #soundBtn {
   position: fixed;
@@ -346,12 +350,6 @@ function draw() {
   if (started && !gameOver) {
     drawNum(score, W/2, 35, true);
   }
-
-  // best
-  ctx.fillStyle = '#333';
-  ctx.font = '10px monospace';
-  ctx.textAlign = 'right';
-  ctx.fillText('HI ' + bestScore, W - 10, 20);
 
   // overlays
   if (!started && !gameOver) {
